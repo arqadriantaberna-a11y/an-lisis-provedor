@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control de Proveedores</title>
+  <style>
+    :root{
+      --bg:#f4f1ec;
+      --card:#ffffff;
+      --text:#1f1f1f;
+      --muted:#777;
+      --line:#ddd6cc;
+      --accent:#7a4f2b;
+      --accent-dark:#5d3a1e;
+      --danger:#b93a32;
+      --ok:#2d7a46;
+      --warn:#c58b1b;
+      --shadow:0 12px 30px rgba(0,0,0,.08);
+      --radius:18px;
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    header{
+      padding:28px 20px;
+      background:#211b16;
+      color:white;
+    }
+
+    header h1{
+      margin:0;
+      font-size:28px;
+      letter-spacing:.3px;
+    }
+
+    header p{
+      margin:8px 0 0;
+      color:#d8d0c7;
+    }
+
+    main{
+      max-width:1180px;
+      margin:0 auto;
+      padding:24px 16px 60px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:320px 1fr;
+      gap:18px;
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+
+    h2,h3{
+      margin-top:0;
+    }
+
+    input, textarea, select{
+      width:100%;
+      padding:11px 12px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      font-size:15px;
+      background:white;
+    }
+
+    textarea{
+      min-height:90px;
+      resize:vertical;
+    }
+
+    label{
+      display:block;
+      font-size:13px;
+      color:var(--muted);
+      margin:12px 0 6px;
+    }
+
+    button{
+      border:0;
+      border-radius:12px;
+      padding:11px 14px;
+      background:var(--accent);
+      color:white;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    button:hover{background:var(--accent-dark)}
+    button.secondary{
+      background:#eee7de;
+      color:#2a211b;
+    }
+    button.secondary:hover{background:#ded4c8}
+    button.danger{background:var(--danger)}
+    button.danger:hover{background:#8f2c27}
+
+    .row{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .provider-list{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin-top:14px;
+    }
+
+    .provider-item{
+      border:1px solid var(--line);
+      background:#fbfaf8;
+      border-radius:14px;
+      padding:12px;
+      cursor:pointer;
+    }
+
+    .provider-item.active{
+      outline:3px solid rgba(122,79,43,.22);
+      border-color:var(--accent);
+    }
+
+    .provider-item strong{
+      display:block;
+    }
+
+    .small{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:4px;
+    }
+
+    .tabs{
+      display:flex;
+      gap:8px;
+      margin-bottom:16px;
+      flex-wrap:wrap;
+    }
+
+    .tab{
+      background:#eee7de;
+      color:#2a211b;
+    }
+
+    .tab.active{
+      background:var(--accent);
+      color:white;
+    }
+
+    .hidden{display:none}
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:14px;
+      overflow:hidden;
+      border-radius:12px;
+    }
+
+    th,td{
+      border-bottom:1px solid var(--line);
+      padding:10px;
+      text-align:left;
+      vertical-align:top;
+      font-size:14px;
+    }
+
+    th{
+      background:#f1ebe4;
+      color:#40352c;
+    }
+
+    .score{
+      display:inline-block;
+      padding:5px 9px;
+      border-radius:999px;
+      font-weight:700;
+      color:white;
+    }
+
+    .score.ok{background:var(--ok)}
+    .score.warn{background:var(--warn)}
+    .score.bad{background:var(--danger)}
+
+    .empty{
+      padding:24px;
+      border:1px dashed var(--line);
+      border-radius:16px;
+      color:var(--muted);
+      background:#fbfaf8;
+    }
+
+    .actions{
+      margin-top:16px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .employee-card{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      margin-top:10px;
+      background:#fbfaf8;
+    }
+
+    @media(max-width:850px){
+      .grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Control de Proveedores</h1>
+    <p>Belgrano Home · proveedores, empleados, evaluaciones y observaciones</p>
+  </header>
+
+  <main>
+    <div class="grid">
+      <section class="card">
+        <h2>Proveedores</h2>
+
+        <label>Nombre del proveedor</label>
+        <div class="row">
+          <input id="providerName" placeholder="Ej: Carpintería López" />
+          <button onclick="addProvider()">Agregar</button>
+        </div>
+
+        <div class="provider-list" id="providerList"></div>
+
+        <div class="actions">
+          <button class="secondary" onclick="exportData()">Backup</button>
+          <button class="secondary" onclick="document.getElementById('importFile').click()">Importar</button>
+          <input id="importFile" type="file" accept="application/json" class="hidden" onchange="importData(event)" />
+        </div>
+      </section>
+
+      <section class="card" id="detail">
+        <div class="empty">Cargá o seleccioná un proveedor para empezar.</div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    let data = JSON.parse(localStorage.getItem("proveedoresDataV1")) || [];
+    let selectedProviderId = data[0]?.id || null;
+    let activeTab = "empleados";
+
+    function save(){
+      localStorage.setItem("proveedoresDataV1", JSON.stringify(data));
+      render();
+    }
+
+    function uid(){
+      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+
+    function getProvider(){
+      return data.find(p => p.id === selectedProviderId);
+    }
+
+    function addProvider(){
+      const input = document.getElementById("providerName");
+      const name = input.value.trim();
+      if(!name) return alert("Escribí el nombre del proveedor.");
+
+      data.push({
+        id: uid(),
+        name,
+        employees: [],
+        evaluations: []
+      });
+
+      selectedProviderId = data[data.length - 1].id;
+      input.value = "";
+      save();
+    }
+
+    function deleteProvider(id){
+      if(!confirm("¿Eliminar este proveedor y todos sus empleados/evaluaciones?")) return;
+      data = data.filter(p => p.id !== id);
+      selectedProviderId = data[0]?.id || null;
+      save();
+    }
+
+    function selectProvider(id){
+      selectedProviderId = id;
+      activeTab = "empleados";
+      render();
+    }
+
+    function addEmployee(){
+      const provider = getProvider();
+      const name = document.getElementById("employeeName").value.trim();
+      if(!name) return alert("Escribí el nombre del empleado.");
+
+      provider.employees.push({
+        id: uid(),
+        name,
+        notes: ""
+      });
+
+      save();
+    }
+
+    function deleteEmployee(id){
+      const provider = getProvider();
+      if(!confirm("¿Eliminar este empleado? Las evaluaciones viejas quedan guardadas con su nombre.")) return;
+      provider.employees = provider.employees.filter(e => e.id !== id);
+      save();
+    }
+
+    function updateEmployeeNotes(id, value){
+      const provider = getProvider();
+      const employee = provider.employees.find(e => e.id === id);
+      employee.notes = value;
+      save();
+    }
+
+    function addEvaluation(){
+      const provider = getProvider();
+
+      const employeeId = document.getElementById("evalEmployee").value;
+      const employee = provider.employees.find(e => e.id === employeeId);
+
+      if(!employee) return alert("Primero cargá un empleado.");
+
+      const work = document.getElementById("evalWork").value.trim();
+      const notes = document.getElementById("evalNotes").value.trim();
+
+      const calidad = Number(document.getElementById("calidad").value);
+      const cumplimiento = Number(document.getElementById("cumplimiento").value);
+      const tiempo = Number(document.getElementById("tiempo").value);
+      const limpieza = Number(document.getElementById("limpieza").value);
+
+      const score = ((calidad * 0.40) + (cumplimiento * 0.30) + (tiempo * 0.20) + (limpieza * 0.10)).toFixed(2);
+
+      provider.evaluations.push({
+        id: uid(),
+        date: document.getElementById("evalDate").value || new Date().toISOString().slice(0,10),
+        employeeId,
+        employeeName: employee.name,
+        work,
+        calidad,
+        cumplimiento,
+        tiempo,
+        limpieza,
+        notes,
+        score: Number(score)
+      });
+
+      save();
+    }
+
+    function deleteEvaluation(id){
+      const provider = getProvider();
+      if(!confirm("¿Eliminar esta evaluación?")) return;
+      provider.evaluations = provider.evaluations.filter(e => e.id !== id);
+      save();
+    }
+
+    function average(list){
+      if(!list.length) return "-";
+      const total = list.reduce((acc, item) => acc + Number(item.score || 0), 0);
+      return (total / list.length).toFixed(2);
+    }
+
+    function scoreClass(score){
+      if(score >= 4) return "ok";
+      if(score >= 3) return "warn";
+      return "bad";
+    }
+
+    function setTab(tab){
+      activeTab = tab;
+      render();
+    }
+
+    function renderProviderList(){
+      const list = document.getElementById("providerList");
+
+      if(!data.length){
+        list.innerHTML = '<div class="empty">Todavía no hay proveedores cargados.</div>';
+        return;
+      }
+
+      list.innerHTML = data.map(p => {
+        const avg = average(p.evaluations);
+        return `
+          <div class="provider-item ${p.id === selectedProviderId ? "active" : ""}" onclick="selectProvider('${p.id}')">
+            <strong>${escapeHtml(p.name)}</strong>
+            <div class="small">${p.employees.length} empleado/s · Promedio: ${avg}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function render(){
+      renderProviderList();
+
+      const detail = document.getElementById("detail");
+      const provider = getProvider();
+
+      if(!provider){
+        detail.innerHTML = '<div class="empty">Cargá o seleccioná un proveedor para empezar.</div>';
+        return;
+      }
+
+      detail.innerHTML = `
+        <div class="row" style="justify-content:space-between">
+          <div>
+            <h2>${escapeHtml(provider.name)}</h2>
+            <div class="small">Promedio general: ${average(provider.evaluations)} · Evaluaciones: ${provider.evaluations.length}</div>
+          </div>
+          <button class="danger" onclick="deleteProvider('${provider.id}')">Eliminar proveedor</button>
+        </div>
+
+        <div class="tabs">
+          <button class="tab ${activeTab === "empleados" ? "active" : ""}" onclick="setTab('empleados')">Empleados</button>
+          <button class="tab ${activeTab === "evaluar" ? "active" : ""}" onclick="setTab('evaluar')">Nueva evaluación</button>
+          <button class="tab ${activeTab === "historial" ? "active" : ""}" onclick="setTab('historial')">Historial</button>
+        </div>
+
+        ${activeTab === "empleados" ? employeesTab(provider) : ""}
+        ${activeTab === "evaluar" ? evaluationTab(provider) : ""}
+        ${activeTab === "historial" ? historyTab(provider) : ""}
+      `;
+    }
+
+    function employeesTab(provider){
+      return `
+        <h3>Empleados del proveedor</h3>
+
+        <label>Nombre del empleado</label>
+        <div class="row">
+          <input id="employeeName" placeholder="Ej: Juan Pérez" />
+          <button onclick="addEmployee()">Agregar empleado</button>
+        </div>
+
+        ${provider.employees.length ? provider.employees.map(emp => `
+          <div class="employee-card">
+            <div class="row" style="justify-content:space-between">
+              <strong>${escapeHtml(emp.name)}</strong>
+              <button class="danger" onclick="deleteEmployee('${emp.id}')">Eliminar</button>
+            </div>
+            <label>Observaciones generales del empleado</label>
+            <textarea onchange="updateEmployeeNotes('${emp.id}', this.value)" placeholder="Ej: prolijo, tarda en responder, buen armado, revisar terminaciones...">${escapeHtml(emp.notes || "")}</textarea>
+          </div>
+        `).join("") : '<div class="empty">Todavía no cargaste empleados.</div>'}
+      `;
+    }
+
+    function evaluationTab(provider){
+      if(!provider.employees.length){
+        return '<div class="empty">Primero cargá al menos un empleado en este proveedor.</div>';
+      }
+
+      return `
+        <h3>Nueva evaluación</h3>
+
+        <label>Fecha</label>
+        <input id="evalDate" type="date" value="${new Date().toISOString().slice(0,10)}" />
+
+        <label>Empleado</label>
+        <select id="evalEmployee">
+          ${provider.employees.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join("")}
+        </select>
+
+        <label>Trabajo / orden</label>
+        <input id="evalWork" placeholder="Ej: Rack TV, orden 1542" />
+
+        <div class="grid" style="grid-template-columns:repeat(4,1fr); gap:10px">
+          ${scoreSelect("calidad", "Calidad")}
+          ${scoreSelect("cumplimiento", "Cumplimiento")}
+          ${scoreSelect("tiempo", "Tiempo")}
+          ${scoreSelect("limpieza", "Limpieza")}
+        </div>
+
+        <label>Observaciones</label>
+        <textarea id="evalNotes" placeholder="Ej: cantos mal pegados, entregó en fecha, respetó plano, hubo que corregir..."></textarea>
+
+        <div class="actions">
+          <button onclick="addEvaluation()">Guardar evaluación</button>
+        </div>
+      `;
+    }
+
+    function scoreSelect(id, label){
+      return `
+        <div>
+          <label>${label}</label>
+          <select id="${id}">
+            <option value="5">5 - Excelente</option>
+            <option value="4">4 - Bueno</option>
+            <option value="3">3 - Regular</option>
+            <option value="2">2 - Malo</option>
+            <option value="1">1 - Crítico</option>
+          </select>
+        </div>
+      `;
+    }
+
+    function historyTab(provider){
+      if(!provider.evaluations.length){
+        return '<div class="empty">Todavía no hay evaluaciones cargadas.</div>';
+      }
+
+      return `
+        <h3>Historial de evaluaciones</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Empleado</th>
+              <th>Trabajo</th>
+              <th>Puntaje</th>
+              <th>Observaciones</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${provider.evaluations.slice().reverse().map(e => `
+              <tr>
+                <td>${e.date}</td>
+                <td>${escapeHtml(e.employeeName)}</td>
+                <td>${escapeHtml(e.work || "-")}</td>
+                <td><span class="score ${scoreClass(e.score)}">${e.score}</span></td>
+                <td>${escapeHtml(e.notes || "-")}</td>
+                <td><button class="danger" onclick="deleteEvaluation('${e.id}')">Eliminar</button></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function exportData(){
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "backup-proveedores.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(event){
+      const file = event.target.files[0];
+      if(!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const imported = JSON.parse(reader.result);
+          if(!Array.isArray(imported)) throw new Error();
+          data = imported;
+          selectedProviderId = data[0]?.id || null;
+          save();
+        }catch{
+          alert("El archivo no es válido.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function escapeHtml(text){
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    render();
+  </script>
+</body>
+</html>
