@@ -1,49 +1,80 @@
-create table if not exists providers (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists employees (
-  id uuid primary key default gen_random_uuid(),
-  provider_id uuid not null references providers(id) on delete cascade,
-  name text not null,
-  notes text default '',
-  created_at timestamptz not null default now()
-);
-
-create table if not exists evaluations (
-  id uuid primary key default gen_random_uuid(),
-  provider_id uuid not null references providers(id) on delete cascade,
-  employee_id uuid not null references employees(id) on delete cascade,
-  employee_name text,
-  date date not null default current_date,
-  work text default '',
-  quality int not null check (quality between 1 and 5),
-  compliance int not null check (compliance between 1 and 5),
-  time_score int not null check (time_score between 1 and 5),
-  cleanliness int not null check (cleanliness between 1 and 5),
-  attitude int not null check (attitude between 1 and 5),
-  notes text default '',
-  score numeric(3,2) not null,
-  created_at timestamptz not null default now()
-);
-
-alter table providers enable row level security;
-alter table employees enable row level security;
-alter table evaluations enable row level security;
-
-create policy "read providers" on providers for select using (true);
-create policy "insert providers" on providers for insert with check (true);
-create policy "update providers" on providers for update using (true) with check (true);
-create policy "delete providers" on providers for delete using (true);
-
-create policy "read employees" on employees for select using (true);
-create policy "insert employees" on employees for insert with check (true);
-create policy "update employees" on employees for update using (true) with check (true);
-create policy "delete employees" on employees for delete using (true);
-
-create policy "read evaluations" on evaluations for select using (true);
-create policy "insert evaluations" on evaluations for insert with check (true);
-create policy "update evaluations" on evaluations for update using (true) with check (true);
-create policy "delete evaluations" on evaluations for delete using (true);
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control de Proveedores</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--bg:#f4f1ec;--card:#fff;--text:#1f1f1f;--muted:#777;--line:#ddd6cc;--accent:#7a4f2b;--danger:#b93a32;--ok:#2d7a46;--warn:#c58b1b;--radius:18px}
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+    header{padding:28px 20px;background:#211b16;color:white} header h1{margin:0;font-size:28px} header p{margin:8px 0 0;color:#d8d0c7}
+    main{max-width:1220px;margin:0 auto;padding:24px 16px 60px}.grid{display:grid;grid-template-columns:320px 1fr;gap:18px}
+    .card,.setup{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 12px 30px rgba(0,0,0,.08)}
+    .setup{background:#fff8e8;border-color:#e7cc8c;margin-bottom:18px} h2,h3{margin-top:0}
+    input,textarea,select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:12px;font-size:15px;background:white}
+    textarea{min-height:80px;resize:vertical} label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
+    button{border:0;border-radius:12px;padding:11px 14px;background:var(--accent);color:white;font-weight:700;cursor:pointer}
+    button.secondary{background:#eee7de;color:#2a211b}button.danger{background:var(--danger)}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.provider-list{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+    .provider-item{border:1px solid var(--line);background:#fbfaf8;border-radius:14px;padding:12px;cursor:pointer}.provider-item.active{outline:3px solid rgba(122,79,43,.22);border-color:var(--accent)}
+    .small{color:var(--muted);font-size:13px;margin-top:4px}.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.tab{background:#eee7de;color:#2a211b}.tab.active{background:var(--accent);color:white}
+    table{width:100%;border-collapse:collapse;margin-top:14px}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top;font-size:14px}th{background:#f1ebe4}
+    .score{display:inline-block;padding:5px 9px;border-radius:999px;font-weight:700;color:white}.score.ok{background:var(--ok)}.score.warn{background:var(--warn)}.score.bad{background:var(--danger)}
+    .empty{padding:24px;border:1px dashed var(--line);border-radius:16px;color:var(--muted);background:#fbfaf8}.actions{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+    .employee-card{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px;background:#fbfaf8}.mini-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.error{color:var(--danger);font-weight:700}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr 1fr}}@media(max-width:520px){.mini-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header><h1>Control de Proveedores</h1><p>Proveedores, empleados, desempeño acumulado y observaciones guardadas en Supabase</p></header>
+<main>
+<section class="setup" id="setupBox">
+  <h3>Conexión Supabase</h3>
+  <p class="small">Pegá tu URL y tu anon key. Quedan guardadas en este navegador.</p>
+  <label>SUPABASE URL</label><input id="supabaseUrlInput" placeholder="https://xxxxx.supabase.co">
+  <label>SUPABASE ANON KEY</label><input id="supabaseKeyInput" placeholder="eyJhbGciOi...">
+  <div class="actions"><button onclick="saveConfig()">Guardar conexión</button><button class="secondary" onclick="clearConfig()">Cambiar conexión</button></div>
+</section>
+<div id="status" class="small"></div>
+<div class="grid">
+<section class="card">
+  <h2>Proveedores</h2>
+  <label>Nombre del proveedor</label>
+  <div class="row"><input id="providerName" placeholder="Ej: Carpintería López"><button onclick="addProvider()">Agregar</button></div>
+  <div class="provider-list" id="providerList"></div>
+</section>
+<section class="card" id="detail"><div class="empty">Conectá Supabase y cargá o seleccioná un proveedor.</div></section>
+</div>
+</main>
+<script>
+let db=null, providers=[], employees=[], evaluations=[], selectedProviderId=null, activeTab="empleados";
+const savedUrl=localStorage.getItem("supabaseUrl"), savedKey=localStorage.getItem("supabaseAnonKey");
+if(savedUrl&&savedKey){document.getElementById("supabaseUrlInput").value=savedUrl;document.getElementById("supabaseKeyInput").value=savedKey;connectSupabase(savedUrl,savedKey)}
+function status(t,e=false){document.getElementById("status").innerHTML=e?`<span class="error">${t}</span>`:t}
+function saveConfig(){const u=document.getElementById("supabaseUrlInput").value.trim(), k=document.getElementById("supabaseKeyInput").value.trim(); if(!u||!k)return alert("Pegá la URL y la anon key."); localStorage.setItem("supabaseUrl",u);localStorage.setItem("supabaseAnonKey",k);connectSupabase(u,k)}
+function clearConfig(){localStorage.removeItem("supabaseUrl");localStorage.removeItem("supabaseAnonKey");location.reload()}
+async function connectSupabase(u,k){try{db=supabase.createClient(u,k);await loadAll();document.getElementById("setupBox").style.display="none";status("Conectado. Los datos se guardan automáticamente.")}catch(err){console.error(err);status("No se pudo conectar. Revisá URL, anon key y tablas.",true)}}
+async function loadAll(){const [p,e,v]=await Promise.all([db.from("providers").select("*").order("created_at",{ascending:false}),db.from("employees").select("*").order("created_at",{ascending:false}),db.from("evaluations").select("*").order("date",{ascending:false})]); if(p.error)throw p.error;if(e.error)throw e.error;if(v.error)throw v.error;providers=p.data||[];employees=e.data||[];evaluations=v.data||[];if(!selectedProviderId&&providers.length)selectedProviderId=providers[0].id;render()}
+function pe(pid){return employees.filter(e=>e.provider_id===pid)} function pv(pid){return evaluations.filter(e=>e.provider_id===pid)} function ev(eid){return evaluations.filter(e=>e.employee_id===eid)} function gp(){return providers.find(p=>p.id===selectedProviderId)}
+async function addProvider(){const name=document.getElementById("providerName").value.trim(); if(!name)return alert("Escribí el proveedor."); const r=await db.from("providers").insert({name}).select().single(); if(r.error)return alert(r.error.message);selectedProviderId=r.data.id;document.getElementById("providerName").value="";await loadAll()}
+async function deleteProvider(id){if(!confirm("¿Eliminar proveedor con empleados y evaluaciones?"))return;const r=await db.from("providers").delete().eq("id",id);if(r.error)return alert(r.error.message);selectedProviderId=null;await loadAll()}
+function selectProvider(id){selectedProviderId=id;activeTab="empleados";render()} function setTab(t){activeTab=t;render()}
+async function addEmployee(){const p=gp(), name=document.getElementById("employeeName").value.trim(), notes=document.getElementById("employeeNotes").value.trim(); if(!name)return alert("Escribí el empleado.");const r=await db.from("employees").insert({provider_id:p.id,name,notes});if(r.error)return alert(r.error.message);await loadAll()}
+async function updateEmployee(id,field,value){const r=await db.from("employees").update({[field]:value}).eq("id",id);if(r.error)return alert(r.error.message);await loadAll()}
+async function deleteEmployee(id){if(!confirm("¿Eliminar empleado y sus evaluaciones?"))return;const r=await db.from("employees").delete().eq("id",id);if(r.error)return alert(r.error.message);await loadAll()}
+async function addEvaluation(){const p=gp(), eid=document.getElementById("evalEmployee").value, emp=employees.find(e=>e.id===eid); if(!emp)return alert("Primero cargá un empleado."); const quality=+val("calidad"), compliance=+val("cumplimiento"), time_score=+val("tiempo"), cleanliness=+val("limpieza"), attitude=+val("actitud"); const score=+((quality*.35)+(compliance*.25)+(time_score*.15)+(cleanliness*.10)+(attitude*.15)).toFixed(2); const r=await db.from("evaluations").insert({provider_id:p.id,employee_id:emp.id,employee_name:emp.name,date:val("evalDate")||new Date().toISOString().slice(0,10),work:val("evalWork"),quality,compliance,time_score,cleanliness,attitude,notes:val("evalNotes"),score}); if(r.error)return alert(r.error.message);activeTab="historial";await loadAll()}
+async function deleteEvaluation(id){if(!confirm("¿Eliminar evaluación?"))return;const r=await db.from("evaluations").delete().eq("id",id);if(r.error)return alert(r.error.message);await loadAll()}
+async function updateEvaluation(id){const row=document.getElementById("edit-"+id);const quality=+row.querySelector(".q").value, compliance=+row.querySelector(".c").value, time_score=+row.querySelector(".t").value, cleanliness=+row.querySelector(".l").value, attitude=+row.querySelector(".a").value;const score=+((quality*.35)+(compliance*.25)+(time_score*.15)+(cleanliness*.10)+(attitude*.15)).toFixed(2);const r=await db.from("evaluations").update({date:row.querySelector(".d").value,work:row.querySelector(".w").value,notes:row.querySelector(".n").value,quality,compliance,time_score,cleanliness,attitude,score}).eq("id",id);if(r.error)return alert(r.error.message);await loadAll()}
+function val(id){return document.getElementById(id).value.trim()} function avg(list){if(!list.length)return "-";return (list.reduce((a,i)=>a+Number(i.score||0),0)/list.length).toFixed(2)} function cls(s){return s>=4?"ok":s>=3?"warn":"bad"} function esc(t){return String(t??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+function renderProviderList(){const list=document.getElementById("providerList"); if(!providers.length){list.innerHTML='<div class="empty">Todavía no hay proveedores.</div>';return} list.innerHTML=providers.map(p=>`<div class="provider-item ${p.id===selectedProviderId?"active":""}" onclick="selectProvider('${p.id}')"><strong>${esc(p.name)}</strong><div class="small">${pe(p.id).length} empleado/s · ${pv(p.id).length} evaluación/es · Promedio: ${avg(pv(p.id))}</div></div>`).join("")}
+function render(){renderProviderList();const d=document.getElementById("detail"),p=gp(); if(!p){d.innerHTML='<div class="empty">Cargá o seleccioná un proveedor.</div>';return} d.innerHTML=`<div class="row" style="justify-content:space-between"><div><h2>${esc(p.name)}</h2><div class="small">Promedio general: ${avg(pv(p.id))} · Evaluaciones acumuladas: ${pv(p.id).length}</div></div><button class="danger" onclick="deleteProvider('${p.id}')">Eliminar proveedor</button></div><div class="tabs"><button class="tab ${activeTab==="empleados"?"active":""}" onclick="setTab('empleados')">Empleados</button><button class="tab ${activeTab==="evaluar"?"active":""}" onclick="setTab('evaluar')">Nueva evaluación</button><button class="tab ${activeTab==="historial"?"active":""}" onclick="setTab('historial')">Historial</button><button class="tab ${activeTab==="ranking"?"active":""}" onclick="setTab('ranking')">Desempeño</button></div>${activeTab==="empleados"?employeesTab(p):""}${activeTab==="evaluar"?evaluationTab(p):""}${activeTab==="historial"?historyTab(p):""}${activeTab==="ranking"?rankingTab(p):""}`}
+function employeesTab(p){const emps=pe(p.id);return `<h3>Empleados</h3><label>Nombre del empleado</label><input id="employeeName" placeholder="Ej: Juan Pérez"><label>Observación general</label><textarea id="employeeNotes" placeholder="Ej: buen armado, revisar cantos, mejora en tiempos..."></textarea><div class="actions"><button onclick="addEmployee()">Agregar empleado</button></div>${emps.length?emps.map(e=>`<div class="employee-card"><div class="row" style="justify-content:space-between"><div><strong>${esc(e.name)}</strong><div class="small">Promedio acumulado: ${avg(ev(e.id))} · Evaluaciones: ${ev(e.id).length}</div></div><button class="danger" onclick="deleteEmployee('${e.id}')">Eliminar</button></div><label>Nombre editable</label><input value="${esc(e.name)}" onchange="updateEmployee('${e.id}','name',this.value)"><label>Observación general editable</label><textarea onchange="updateEmployee('${e.id}','notes',this.value)">${esc(e.notes)}</textarea></div>`).join(""):'<div class="empty">Todavía no cargaste empleados.</div>'}`}
+function evaluationTab(p){const emps=pe(p.id);if(!emps.length)return '<div class="empty">Primero cargá al menos un empleado.</div>';return `<h3>Nueva evaluación</h3><label>Fecha</label><input id="evalDate" type="date" value="${new Date().toISOString().slice(0,10)}"><label>Empleado</label><select id="evalEmployee">${emps.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("")}</select><label>Trabajo / orden</label><input id="evalWork" placeholder="Ej: Rack TV, orden 1542"><div class="mini-grid">${scoreSelect("calidad","Calidad")}${scoreSelect("cumplimiento","Cumplimiento")}${scoreSelect("tiempo","Tiempo")}${scoreSelect("limpieza","Limpieza")}${scoreSelect("actitud","Actitud")}</div><label>Observaciones de esta evaluación</label><textarea id="evalNotes" placeholder="Ej: cantos mal pegados, entregó en fecha, respetó plano..."></textarea><div class="actions"><button onclick="addEvaluation()">Guardar evaluación</button></div>`}
+function scoreSelect(id,label){return `<div><label>${label}</label><select id="${id}"><option value="5">5 - Excelente</option><option value="4">4 - Bueno</option><option value="3">3 - Regular</option><option value="2">2 - Malo</option><option value="1">1 - Crítico</option></select></div>`}
+function opts(s){return [5,4,3,2,1].map(n=>`<option value="${n}" ${+s===n?"selected":""}>${n}</option>`).join("")}
+function historyTab(p){const list=pv(p.id);if(!list.length)return '<div class="empty">Todavía no hay evaluaciones.</div>';return `<h3>Historial acumulado editable</h3><table><thead><tr><th>Fecha</th><th>Empleado</th><th>Trabajo</th><th>Puntaje</th><th>Observación</th><th>Notas</th></tr></thead><tbody>${list.map(e=>`<tr id="edit-${e.id}"><td><input class="d" type="date" value="${e.date}"></td><td>${esc(e.employee_name)}</td><td><input class="w" value="${esc(e.work)}"></td><td><span class="score ${cls(e.score)}">${e.score}</span></td><td><textarea class="n">${esc(e.notes)}</textarea></td><td><select class="q">${opts(e.quality)}</select><select class="c">${opts(e.compliance)}</select><select class="t">${opts(e.time_score)}</select><select class="l">${opts(e.cleanliness)}</select><select class="a">${opts(e.attitude)}</select><div class="actions"><button onclick="updateEvaluation('${e.id}')">Guardar</button><button class="danger" onclick="deleteEvaluation('${e.id}')">Eliminar</button></div></td></tr>`).join("")}</tbody></table>`}
+function rankingTab(p){const rows=pe(p.id).map(e=>({name:e.name,notes:e.notes,count:ev(e.id).length,avg:avg(ev(e.id))})).sort((a,b)=>Number(b.avg||0)-Number(a.avg||0));if(!rows.length)return '<div class="empty">Todavía no hay empleados.</div>';return `<h3>Desempeño acumulado por empleado</h3><table><thead><tr><th>Empleado</th><th>Promedio</th><th>Evaluaciones</th><th>Observación general</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.avg==="-"?"-":`<span class="score ${cls(+r.avg)}">${r.avg}</span>`}</td><td>${r.count}</td><td>${esc(r.notes||"-")}</td></tr>`).join("")}</tbody></table>`}
+</script>
+</body>
+</html>
