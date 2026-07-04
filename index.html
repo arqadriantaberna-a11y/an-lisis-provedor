@@ -5,32 +5,274 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Control de Proveedores</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
-body{margin:0;font-family:Arial;background:#f4f1ec;color:#1f1f1f}
-header{background:#211b16;color:white;padding:24px}
-main{max-width:1100px;margin:auto;padding:20px}
-.card{background:white;border:1px solid #ddd6cc;border-radius:16px;padding:18px;margin-bottom:16px}
-.grid{display:grid;grid-template-columns:300px 1fr;gap:16px}
-input,textarea,select{width:100%;padding:10px;margin:6px 0 12px;border:1px solid #ddd6cc;border-radius:10px}
-button{background:#7a4f2b;color:white;border:0;border-radius:10px;padding:10px 14px;font-weight:bold;cursor:pointer}
-button.danger{background:#b93a32}
-button.secondary{background:#eee7de;color:#222}
-.item{border:1px solid #ddd6cc;border-radius:12px;padding:12px;margin:8px 0;cursor:pointer}
-.item.active{border-color:#7a4f2b;box-shadow:0 0 0 3px #7a4f2b33}
-.small{color:#777;font-size:13px}
-.tabs button{margin-right:6px}
-.score{display:inline-block;padding:5px 9px;border-radius:999px;color:white;font-weight:bold}
-.ok{background:#2d7a46}.warn{background:#c58b1b}.bad{background:#b93a32}
-table{width:100%;border-collapse:collapse;margin-top:12px}
-td,th{border-bottom:1px solid #ddd6cc;padding:8px;text-align:left;vertical-align:top}
-@media(max-width:800px){.grid{grid-template-columns:1fr}}
+:root{
+  --bg:#f4f1ec;
+  --paper:#ffffff;
+  --ink:#211b16;
+  --muted:#746b62;
+  --line:#ddd6cc;
+  --brand:#7a4f2b;
+  --brand-dark:#211b16;
+  --soft:#eee7de;
+  --good:#2d7a46;
+  --warn:#c58b1b;
+  --bad:#b93a32;
+  --shadow:0 12px 30px rgba(33,27,22,.08);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(circle at top left,#fff7ec 0,#f4f1ec 35%,#eee7de 100%);
+  color:var(--ink);
+}
+
+header{
+  background:linear-gradient(135deg,#211b16,#4b3422 58%,#7a4f2b);
+  color:white;
+  padding:30px 22px;
+  box-shadow:var(--shadow);
+}
+
+.header-inner{
+  max-width:1180px;
+  margin:auto;
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+h1{margin:0;font-size:34px;letter-spacing:-.5px}
+header p{margin:8px 0 0;color:#f3e8dc}
+.badge{
+  background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.25);
+  padding:10px 14px;
+  border-radius:999px;
+  font-weight:bold;
+  font-size:13px;
+}
+
+main{max-width:1180px;margin:auto;padding:22px}
+
+.card{
+  background:rgba(255,255,255,.92);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:18px;
+  margin-bottom:16px;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(8px);
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:330px 1fr;
+  gap:16px;
+}
+
+input,textarea,select{
+  width:100%;
+  padding:11px 12px;
+  margin:6px 0 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  color:var(--ink);
+  outline:none;
+}
+
+input:focus,textarea:focus,select:focus{
+  border-color:var(--brand);
+  box-shadow:0 0 0 3px rgba(122,79,43,.15);
+}
+
+textarea{min-height:88px;resize:vertical}
+
+button{
+  background:var(--brand);
+  color:white;
+  border:0;
+  border-radius:12px;
+  padding:10px 14px;
+  font-weight:bold;
+  cursor:pointer;
+  transition:.15s ease;
+}
+
+button:hover{transform:translateY(-1px);filter:brightness(.97)}
+button.danger{background:var(--bad)}
+button.secondary{background:var(--soft);color:#222}
+button.ghost{background:transparent;color:var(--brand);border:1px solid var(--line)}
+
+.item{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:13px;
+  margin:9px 0;
+  cursor:pointer;
+  background:#fff;
+  transition:.15s ease;
+}
+
+.item:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(33,27,22,.07)}
+.item.active{border-color:var(--brand);box-shadow:0 0 0 3px rgba(122,79,43,.18)}
+.item-title{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.small{color:var(--muted);font-size:13px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 8px}
+.tabs button{background:#efe6dc;color:#2b211a}
+.tabs button.active{background:var(--brand);color:#fff}
+
+.score{
+  display:inline-block;
+  padding:5px 10px;
+  border-radius:999px;
+  color:white;
+  font-weight:bold;
+  min-width:52px;
+  text-align:center;
+}
+
+.ok{background:var(--good)}
+.warn{background:var(--warn)}
+.bad{background:var(--bad)}
+.neutral{background:#82786e}
+
+table{width:100%;border-collapse:collapse;margin-top:12px;background:white;border-radius:14px;overflow:hidden}
+td,th{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
+th{background:#f3ece4;color:#3a2d24;font-size:13px;text-transform:uppercase;letter-spacing:.3px}
+
+.dashboard{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+
+.stat{
+  background:linear-gradient(180deg,#fff,#f8f3ed);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:16px;
+}
+
+.stat .num{font-size:30px;font-weight:900;margin-top:6px}
+.stat .label{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.4px}
+
+.panel-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.rank-card{
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:16px;
+  background:#fff;
+}
+
+.bar-wrap{
+  background:#eee7de;
+  border-radius:999px;
+  height:12px;
+  overflow:hidden;
+  margin-top:8px;
+}
+
+.bar{
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,var(--bad),var(--warn),var(--good));
+}
+
+.metric{
+  margin:12px 0;
+}
+
+.metric-head{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:14px;
+}
+
+.chart-box{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:16px;
+}
+
+.chart-row{
+  display:grid;
+  grid-template-columns:140px 1fr 52px;
+  gap:10px;
+  align-items:center;
+  margin:10px 0;
+}
+
+.chart-label{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-size:14px;
+}
+
+.search-box{
+  position:sticky;
+  top:10px;
+  background:#fff;
+  z-index:2;
+  padding-bottom:6px;
+}
+
+.toolbar{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin:10px 0;
+}
+
+.empty{
+  background:#fff8ef;
+  border:1px dashed #d9c7b4;
+  padding:18px;
+  border-radius:16px;
+  color:var(--muted);
+}
+
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .dashboard{grid-template-columns:repeat(2,1fr)}
+  .panel-grid{grid-template-columns:1fr}
+}
+
+@media(max-width:560px){
+  h1{font-size:26px}
+  main{padding:12px}
+  .dashboard{grid-template-columns:1fr}
+  .chart-row{grid-template-columns:1fr}
+}
 </style>
 </head>
+
 <body>
 
 <header>
-<h1>Control de Proveedores</h1>
-<p>Proveedores, empleados, evaluaciones y desempeño acumulado</p>
+  <div class="header-inner">
+    <div>
+      <h1>Control de Proveedores</h1>
+      <p>Proveedores, empleados, evaluaciones y desempeño acumulado</p>
+    </div>
+    <div class="badge" id="estadoConexion">Sin conexión</div>
+  </div>
 </header>
 
 <main>
@@ -44,12 +286,19 @@ td,th{border-bottom:1px solid #ddd6cc;padding:8px;text-align:left;vertical-align
 <button onclick="guardarConexion()">Guardar conexión</button>
 </section>
 
+<section class="card" id="dashboard"></section>
+
 <div class="grid">
 <section class="card">
-<h2>Proveedores</h2>
-<input id="proveedorNombre" placeholder="Nombre del proveedor">
-<button onclick="agregarProveedor()">Agregar proveedor</button>
-<div id="listaProveedores"></div>
+  <h2>Proveedores</h2>
+
+  <div class="search-box">
+    <input id="buscarProveedor" placeholder="Buscar proveedor..." oninput="renderProveedores()">
+    <input id="proveedorNombre" placeholder="Nombre del proveedor">
+    <button onclick="agregarProveedor()">Agregar proveedor</button>
+  </div>
+
+  <div id="listaProveedores"></div>
 </section>
 
 <section class="card" id="detalle">
@@ -74,6 +323,8 @@ if(savedUrl&&savedKey){
   document.getElementById("url").value=savedUrl;
   document.getElementById("key").value=savedKey;
   conectar(savedUrl,savedKey);
+}else{
+  document.getElementById("dashboard").innerHTML='<div class="empty">Conectá Supabase para ver el dashboard.</div>';
 }
 
 function guardarConexion(){
@@ -88,6 +339,7 @@ function guardarConexion(){
 async function conectar(url,key){
   db=supabase.createClient(url,key);
   document.getElementById("config").style.display="none";
+  document.getElementById("estadoConexion").innerText="Conectado · Guardado automático";
   await cargarTodo();
 }
 
@@ -112,12 +364,41 @@ function empleadosDelProveedor(id){return empleados.filter(e=>e.provider_id===id
 function evalsDelProveedor(id){return evaluaciones.filter(e=>e.provider_id===id)}
 function evalsDelEmpleado(id){return evaluaciones.filter(e=>e.employee_id===id)}
 function proveedor(){return proveedores.find(p=>p.id===proveedorActual)}
+
 function promedio(lista){
   if(!lista.length)return "-";
   return (lista.reduce((a,b)=>a+Number(b.score||0),0)/lista.length).toFixed(2);
 }
-function clase(n){return n>=4?"ok":n>=3?"warn":"bad"}
-function limpiar(t){return String(t??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")}
+
+function clase(n){
+  n=Number(n);
+  if(!n)return "neutral";
+  return n>=4?"ok":n>=3?"warn":"bad";
+}
+
+function limpiar(t){
+  return String(t??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+}
+
+function numProm(lista){
+  const p=promedio(lista);
+  return p==="-"?0:Number(p);
+}
+
+function anchoBarra(n){
+  n=Number(n)||0;
+  return Math.max(0,Math.min(100,(n/5)*100));
+}
+
+function nombreProveedor(id){
+  const p=proveedores.find(x=>x.id===id);
+  return p?p.name:"Sin proveedor";
+}
+
+function promedioCampo(lista,campo){
+  if(!lista.length)return 0;
+  return lista.reduce((a,b)=>a+Number(b[campo]||0),0)/lista.length;
+}
 
 async function agregarProveedor(){
   const name=document.getElementById("proveedorNombre").value.trim();
@@ -193,69 +474,163 @@ async function eliminarEvaluacion(id){
 }
 
 function render(){
+  renderDashboard();
   renderProveedores();
   renderDetalle();
 }
 
+function renderDashboard(){
+  const totalProv=proveedores.length;
+  const totalEmp=empleados.length;
+  const totalEval=evaluaciones.length;
+  const promGeneral=promedio(evaluaciones);
+
+  const ranking=proveedores
+    .map(p=>({name:p.name,id:p.id,prom:numProm(evalsDelProveedor(p.id)),cant:evalsDelProveedor(p.id).length}))
+    .filter(x=>x.cant>0)
+    .sort((a,b)=>b.prom-a.prom);
+
+  const mejor=ranking[0];
+  const peor=ranking.length?ranking[ranking.length-1]:null;
+
+  document.getElementById("dashboard").innerHTML=`
+    <div class="dashboard">
+      <div class="stat"><div class="label">Proveedores</div><div class="num">${totalProv}</div></div>
+      <div class="stat"><div class="label">Empleados</div><div class="num">${totalEmp}</div></div>
+      <div class="stat"><div class="label">Evaluaciones</div><div class="num">${totalEval}</div></div>
+      <div class="stat"><div class="label">Promedio general</div><div class="num">${promGeneral}</div></div>
+    </div>
+
+    <div class="panel-grid" style="margin-top:14px">
+      <div class="rank-card">
+        <h3>🏆 Mejor proveedor</h3>
+        ${mejor?`
+          <b>${limpiar(mejor.name)}</b>
+          <div class="small">${mejor.cant} evaluaciones</div>
+          <div class="bar-wrap"><div class="bar" style="width:${anchoBarra(mejor.prom)}%"></div></div>
+          <p><span class="score ${clase(mejor.prom)}">${mejor.prom.toFixed(2)}</span></p>
+        `:`<div class="empty">Todavía no hay evaluaciones.</div>`}
+      </div>
+
+      <div class="rank-card">
+        <h3>⚠️ Peor proveedor</h3>
+        ${peor?`
+          <b>${limpiar(peor.name)}</b>
+          <div class="small">${peor.cant} evaluaciones</div>
+          <div class="bar-wrap"><div class="bar" style="width:${anchoBarra(peor.prom)}%"></div></div>
+          <p><span class="score ${clase(peor.prom)}">${peor.prom.toFixed(2)}</span></p>
+        `:`<div class="empty">Todavía no hay evaluaciones.</div>`}
+      </div>
+    </div>
+
+    <div class="chart-box" style="margin-top:14px">
+      <h3>Ranking de proveedores</h3>
+      ${ranking.slice(0,8).map(x=>`
+        <div class="chart-row">
+          <div class="chart-label">${limpiar(x.name)}</div>
+          <div class="bar-wrap"><div class="bar" style="width:${anchoBarra(x.prom)}%"></div></div>
+          <span class="score ${clase(x.prom)}">${x.prom.toFixed(2)}</span>
+        </div>
+      `).join("") || `<div class="empty">Cargá evaluaciones para ver el ranking.</div>`}
+    </div>
+  `;
+}
+
 function renderProveedores(){
-  document.getElementById("listaProveedores").innerHTML=proveedores.map(p=>{
-    const ev=evalsDelProveedor(p.id);
+  const q=(document.getElementById("buscarProveedor")?.value||"").toLowerCase().trim();
+
+  const lista=proveedores
+    .filter(p=>p.name.toLowerCase().includes(q))
+    .map(p=>({p,pr:numProm(evalsDelProveedor(p.id)),ev:evalsDelProveedor(p.id)}))
+    .sort((a,b)=>b.pr-a.pr);
+
+  document.getElementById("listaProveedores").innerHTML=lista.map(x=>{
+    const p=x.p;
     return `<div class="item ${p.id===proveedorActual?"active":""}" onclick="proveedorActual='${p.id}';pestaña='empleados';render()">
-      <b>${limpiar(p.name)}</b>
-      <div class="small">${empleadosDelProveedor(p.id).length} empleados · Promedio: ${promedio(ev)}</div>
+      <div class="item-title">
+        <b>${limpiar(p.name)}</b>
+        <span class="score ${clase(x.pr)}">${x.ev.length?x.pr.toFixed(2):"-"}</span>
+      </div>
+      <div class="small">${empleadosDelProveedor(p.id).length} empleados · ${x.ev.length} evaluaciones</div>
+      <div class="bar-wrap"><div class="bar" style="width:${anchoBarra(x.pr)}%"></div></div>
     </div>`;
-  }).join("");
+  }).join("") || `<div class="empty">No encontré proveedores.</div>`;
 }
 
 function renderDetalle(){
   const p=proveedor();
   if(!p){document.getElementById("detalle").innerHTML="Seleccioná o cargá un proveedor.";return}
 
+  const evs=evalsDelProveedor(p.id);
+  const pr=promedio(evs);
+
   document.getElementById("detalle").innerHTML=`
-  <div style="display:flex;justify-content:space-between;gap:10px">
+  <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
     <div>
       <h2>${limpiar(p.name)}</h2>
-      <div class="small">Promedio general: ${promedio(evalsDelProveedor(p.id))} · Evaluaciones: ${evalsDelProveedor(p.id).length}</div>
+      <div class="small">Promedio general: ${pr} · Evaluaciones: ${evs.length}</div>
+      <div style="margin-top:10px">
+        <span class="score ${clase(Number(pr))}">${pr}</span>
+      </div>
     </div>
     <button class="danger" onclick="eliminarProveedor('${p.id}')">Eliminar proveedor</button>
   </div>
 
+  <div class="bar-wrap" style="margin:14px 0"><div class="bar" style="width:${anchoBarra(Number(pr))}%"></div></div>
+
   <div class="tabs">
-    <button onclick="pestaña='empleados';render()">Empleados</button>
-    <button onclick="pestaña='evaluar';render()">Nueva evaluación</button>
-    <button onclick="pestaña='historial';render()">Historial</button>
-    <button onclick="pestaña='desempeno';render()">Desempeño</button>
+    <button class="${pestaña==="empleados"?"active":""}" onclick="pestaña='empleados';render()">Empleados</button>
+    <button class="${pestaña==="evaluar"?"active":""}" onclick="pestaña='evaluar';render()">Nueva evaluación</button>
+    <button class="${pestaña==="historial"?"active":""}" onclick="pestaña='historial';render()">Historial</button>
+    <button class="${pestaña==="desempeno"?"active":""}" onclick="pestaña='desempeno';render()">Desempeño</button>
+    <button class="${pestaña==="graficos"?"active":""}" onclick="pestaña='graficos';render()">Gráficos</button>
   </div>
 
   ${pestaña==="empleados"?vistaEmpleados(p):""}
   ${pestaña==="evaluar"?vistaEvaluar(p):""}
   ${pestaña==="historial"?vistaHistorial(p):""}
   ${pestaña==="desempeno"?vistaDesempeno(p):""}
+  ${pestaña==="graficos"?vistaGraficos(p):""}
   `;
 }
 
 function vistaEmpleados(p){
-  const emps=empleadosDelProveedor(p.id);
+  const buscarId="buscarEmpleado";
+  const q=(document.getElementById(buscarId)?.value||"").toLowerCase().trim();
+  const emps=empleadosDelProveedor(p.id)
+    .filter(e=>e.name.toLowerCase().includes(q) || String(e.notes||"").toLowerCase().includes(q))
+    .sort((a,b)=>numProm(evalsDelEmpleado(b.id))-numProm(evalsDelEmpleado(a.id)));
+
   return `
   <h3>Empleados</h3>
+  <input id="buscarEmpleado" placeholder="Buscar empleado u observación..." value="${limpiar(q)}" oninput="renderDetalle()">
   <input id="empleadoNombre" placeholder="Nombre del empleado">
   <textarea id="empleadoObs" placeholder="Observación general"></textarea>
   <button onclick="agregarEmpleado()">Agregar empleado</button>
-  ${emps.map(e=>`
+
+  ${emps.map(e=>{
+    const ev=evalsDelEmpleado(e.id);
+    const pr=promedio(ev);
+    return `
     <div class="item">
-      <b>${limpiar(e.name)}</b>
-      <div class="small">Promedio: ${promedio(evalsDelEmpleado(e.id))} · Evaluaciones: ${evalsDelEmpleado(e.id).length}</div>
+      <div class="item-title">
+        <b>${limpiar(e.name)}</b>
+        <span class="score ${clase(Number(pr))}">${pr}</span>
+      </div>
+      <div class="small">${ev.length} evaluaciones</div>
+      <div class="bar-wrap"><div class="bar" style="width:${anchoBarra(Number(pr))}%"></div></div>
       <label>Nombre</label>
       <input value="${limpiar(e.name)}" onchange="actualizarEmpleado('${e.id}','name',this.value)">
       <label>Observación general</label>
       <textarea onchange="actualizarEmpleado('${e.id}','notes',this.value)">${limpiar(e.notes)}</textarea>
       <button class="danger" onclick="eliminarEmpleado('${e.id}')">Eliminar</button>
-    </div>`).join("")}`;
+    </div>`;
+  }).join("") || `<div class="empty">No hay empleados para mostrar.</div>`}`;
 }
 
 function vistaEvaluar(p){
   const emps=empleadosDelProveedor(p.id);
-  if(!emps.length)return "Primero cargá empleados.";
+  if(!emps.length)return `<div class="empty">Primero cargá empleados.</div>`;
   return `
   <h3>Nueva evaluación</h3>
   <label>Fecha</label><input id="fecha" type="date" value="${new Date().toISOString().slice(0,10)}">
@@ -282,11 +657,11 @@ function selectPuntaje(id,label){
 
 function vistaHistorial(p){
   const evs=evalsDelProveedor(p.id);
-  if(!evs.length)return "Todavía no hay evaluaciones.";
+  if(!evs.length)return `<div class="empty">Todavía no hay evaluaciones.</div>`;
   return `<h3>Historial</h3><table>
   <tr><th>Fecha</th><th>Empleado</th><th>Trabajo</th><th>Puntaje</th><th>Observación</th><th></th></tr>
   ${evs.map(e=>`<tr>
-    <td>${e.date}</td>
+    <td>${limpiar(e.date)}</td>
     <td>${limpiar(e.employee_name)}</td>
     <td>${limpiar(e.work)}</td>
     <td><span class="score ${clase(e.score)}">${e.score}</span></td>
@@ -301,15 +676,79 @@ function vistaDesempeno(p){
   return `<h3>Desempeño acumulado</h3><table>
   <tr><th>Empleado</th><th>Promedio</th><th>Evaluaciones</th><th>Observación general</th></tr>
   ${emps.map(e=>{
-    const pr=promedio(evalsDelEmpleado(e.id));
+    const ev=evalsDelEmpleado(e.id);
+    const pr=promedio(ev);
     return `<tr>
       <td>${limpiar(e.name)}</td>
       <td>${pr==="-"?"-":`<span class="score ${clase(Number(pr))}">${pr}</span>`}</td>
-      <td>${evalsDelEmpleado(e.id).length}</td>
+      <td>${ev.length}</td>
       <td>${limpiar(e.notes)}</td>
     </tr>`;
-  }).join("")}
+  }).join("") || `<tr><td colspan="4">No hay empleados.</td></tr>`}
   </table>`;
+}
+
+function vistaGraficos(p){
+  const evs=evalsDelProveedor(p.id);
+  if(!evs.length)return `<div class="empty">Todavía no hay evaluaciones para generar gráficos.</div>`;
+
+  const calidad=promedioCampo(evs,"quality");
+  const cumplimiento=promedioCampo(evs,"compliance");
+  const tiempo=promedioCampo(evs,"time_score");
+  const limpieza=promedioCampo(evs,"cleanliness");
+  const actitud=promedioCampo(evs,"attitude");
+
+  const empleadosRank=empleadosDelProveedor(p.id)
+    .map(e=>({name:e.name,prom:numProm(evalsDelEmpleado(e.id)),cant:evalsDelEmpleado(e.id).length}))
+    .filter(x=>x.cant>0)
+    .sort((a,b)=>b.prom-a.prom);
+
+  return `
+  <h3>Gráficos del proveedor</h3>
+
+  <div class="panel-grid">
+    <div class="chart-box">
+      <h3>Promedio por criterio</h3>
+      ${metric("Calidad",calidad)}
+      ${metric("Cumplimiento",cumplimiento)}
+      ${metric("Tiempo",tiempo)}
+      ${metric("Limpieza",limpieza)}
+      ${metric("Actitud",actitud)}
+    </div>
+
+    <div class="chart-box">
+      <h3>Ranking de empleados</h3>
+      ${empleadosRank.map(x=>`
+        <div class="chart-row">
+          <div class="chart-label">${limpiar(x.name)}</div>
+          <div class="bar-wrap"><div class="bar" style="width:${anchoBarra(x.prom)}%"></div></div>
+          <span class="score ${clase(x.prom)}">${x.prom.toFixed(2)}</span>
+        </div>
+      `).join("") || `<div class="empty">Sin datos por empleado.</div>`}
+    </div>
+  </div>
+
+  <div class="chart-box" style="margin-top:14px">
+    <h3>Últimas evaluaciones</h3>
+    ${evs.slice(0,10).reverse().map(e=>`
+      <div class="chart-row">
+        <div class="chart-label">${limpiar(e.date)} · ${limpiar(e.employee_name)}</div>
+        <div class="bar-wrap"><div class="bar" style="width:${anchoBarra(e.score)}%"></div></div>
+        <span class="score ${clase(e.score)}">${Number(e.score).toFixed(2)}</span>
+      </div>
+    `).join("")}
+  </div>
+  `;
+}
+
+function metric(label,value){
+  return `<div class="metric">
+    <div class="metric-head">
+      <span>${label}</span>
+      <b>${value.toFixed(2)}</b>
+    </div>
+    <div class="bar-wrap"><div class="bar" style="width:${anchoBarra(value)}%"></div></div>
+  </div>`;
 }
 </script>
 
